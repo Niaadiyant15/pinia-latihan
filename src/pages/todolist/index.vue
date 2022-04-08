@@ -1,168 +1,110 @@
-<template>
-  <div class="container" style="max-width: 600px">
-    <!-- Heading -->
-    <h2 class="text-center mt-5">My Vue Todo App</h2>
+<script setup lang="ts">
+import { useTodoStore } from '@/stores/todo';
+import { storeToRefs } from 'pinia';
+import { computed, ref } from 'vue';
 
-    <!-- Input -->
-    <div class="d-flex mt-5">
+const todo = useTodoStore();
+
+const { addTodo, removeTodo } = todo;
+
+const { todos, newTodo } = storeToRefs(todo);
+
+const filter = ref('all');
+
+const todoList = computed(() => {
+  if (filter.value === 'completed') return todo.completed;
+  if (filter.value === 'active') return todo.active;
+  return todos.value;
+});
+</script>
+
+<template>
+  <main class="container mt-4">
+    <h1>Todo List</h1>
+
+    <div class="d-flex mb-3">
       <input
+        class="form-control"
+        placeholder="Type..."
         type="text"
-        v-model="task"
-        placeholder="Enter task"
-        class="w-100 form-control"
+        name="newTodo"
+        v-model="newTodo"
       />
-      <button class="btn btn-warning rounded-0" @click="submitTask">
-        SUBMIT
+      <button class="btn btn-primary" type="button" @click="addTodo">
+        Add
       </button>
     </div>
 
-    <!-- Task table -->
-    <table class="table table-bordered mt-5">
-      <thead>
-        <tr>
-          <th scope="col">Task</th>
-          <th scope="col" style="width: 120px">Status</th>
-          <th scope="col" class="text-center">#</th>
-          <th scope="col" class="text-center">#</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="(task, index) in tasks" :key="index">
-          <td>
-            <span :class="{ 'line-through': task.status === 'finished' }">
-              {{ task.name }}
-            </span>
-          </td>
-          <td>
-            <span
-              class="pointer noselect"
-              @click="changeStatus(index)"
-              :class="{
-                'text-danger': task.status === 'to-do',
-                'text-success': task.status === 'finished',
-                'text-warning': task.status === 'in-progress',
-              }"
-            >
-              {{ capitalizeFirstChar(task.status) }}
-            </span>
-          </td>
-          <td class="text-center">
-            <div @click="deleteTask(index)">
-              <span class="fa fa-trash pointer"></span>
-            </div>
-          </td>
-          <td class="text-center">
-            <div @click="editTask(index)">
-              <p class="fa fa-pen pointer"></p>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+    <div class="nav nav-pills d-flex align-items-center mb-3">
+      <span class="me-3">Filter:</span>
+      <a
+        href="#"
+        class="nav-link"
+        :class="{ active: filter === 'all' }"
+        @click.prevent="filter = 'all'"
+      >
+        All
+      </a>
+      <a
+        href="#"
+        class="nav-link"
+        :class="{ active: filter === 'active' }"
+        @click.prevent="filter = 'active'"
+      >
+        Active
+      </a>
+      <a
+        href="#"
+        class="nav-link"
+        :class="{ active: filter === 'completed' }"
+        @click.prevent="filter = 'completed'"
+      >
+        Done
+      </a>
+    </div>
+
+    <ul class="list-group">
+      <li
+        v-for="(todo, index) in todoList"
+        :key="index"
+        class="list-group-item"
+      >
+        <div class="d-flex align-items-center">
+          <input type="checkbox" v-model="todo.completed" />
+          <span class="mx-2 flex-grow-1" :class="{ done: todo.completed }">
+            {{ todo.title }}</span
+          >
+          <button class="btn btn-danger" @click="removeTodo(index)">
+            Delete
+          </button>
+        </div>
+      </li>
+    </ul>
+  </main>
 </template>
 
-<script>
-export default {
-  name: "HelloWorld",
-  props: {
-    msg: String,
-  },
-
-  data() {
-    return {
-      task: "",
-      editedTask: null,
-      statuses: ["to-do", "in-progress", "finished"],
-
-      /* Status could be: 'to-do' / 'in-progress' / 'finished' */
-      tasks: [
-        {
-          name: "Steal bananas from the supermarket.",
-          status: "to-do",
-        },
-        {
-          name: "Eat 1 kg chocolate in 1 hour.",
-          status: "in-progress",
-        },
-        {
-          name: "Create YouTube video.",
-          status: "finished",
-        },
-      ],
-    };
-  },
-
-  methods: {
-    /**
-     * Capitalize first character
-     */
-    capitalizeFirstChar(str) {
-      return str.charAt(0).toUpperCase() + str.slice(1);
-    },
-
-    /**
-     * Change status of task by index
-     */
-    changeStatus(index) {
-      let newIndex = this.statuses.indexOf(this.tasks[index].status);
-      if (++newIndex > 2) newIndex = 0;
-      this.tasks[index].status = this.statuses[newIndex];
-    },
-
-    /**
-     * Deletes task by index
-     */
-    deleteTask(index) {
-      this.tasks.splice(index, 1);
-    },
-
-    /**
-     * Edit task
-     */
-    editTask(index) {
-      this.task = this.tasks[index].name;
-      this.editedTask = index;
-    },
-
-    /**
-     * Add / Update task
-     */
-    submitTask() {
-      if (this.task.length === 0) return;
-
-      /* We need to update the task */
-      if (this.editedTask != null) {
-        this.tasks[this.editedTask].name = this.task;
-        this.editedTask = null;
-      } else {
-        /* We need to add new task */
-        this.tasks.push({
-          name: this.task,
-          status: "todo",
-        });
-      }
-
-      this.task = "";
-    },
-  },
-};
-</script>
-
 <style scoped>
-.pointer {
-  cursor: pointer;
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
-.noselect {
-  -webkit-touch-callout: none; /* iOS Safari */
-  -webkit-user-select: none; /* Safari */
-  -khtml-user-select: none; /* Konqueror HTML */
-  -moz-user-select: none; /* Old versions of Firefox */
-  -ms-user-select: none; /* Internet Explorer/Edge */
-  user-select: none; /* Non-prefixed version, currently
-                                  supported by Chrome, Edge, Opera and Firefox */
+.filter button {
+  appearance: none;
+  background-color: transparent;
+  border: none;
+  color: white;
+  font-weight: bold;
+  border-radius: 4px;
 }
-.line-through {
+.filter button.active {
+  background-color: darkcyan;
+  color: white;
+}
+
+.done {
   text-decoration: line-through;
 }
 </style>
